@@ -1,16 +1,17 @@
-"""CLI entry point."""
+"""CLI entry point: run the Phase 3 experiment campaign."""
 import argparse
+import os
+
+from experiments import run_all
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Grain growth Potts simulation")
-    parser.add_argument("--size", type=int, default=128)
-    parser.add_argument("--q", type=int, default=64)
-    parser.add_argument("--steps", type=int, default=1000)
-    parser.add_argument("--temperature", type=float, default=0.5)
-    parser.add_argument("--seed", type=int, default=0)
+    parser = argparse.ArgumentParser(description="Grain growth Potts experiment campaign")
+    parser.add_argument("--out-dir", default=os.path.join(
+        os.path.dirname(__file__), "..", "results"),
+        help="Output directory (creates figures/ and data/ subdirs)")
     args = parser.parse_args()
-    raise NotImplementedError
+    run_all(args.out_dir)
 
 
 if __name__ == "__main__":
