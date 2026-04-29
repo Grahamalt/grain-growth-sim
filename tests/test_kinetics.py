@@ -6,9 +6,15 @@ import numpy as np
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "code"))
 
-from mc_step import metropolis_step, monte_carlo_step, propose_move  # noqa: E402
+from mc_step import (  # noqa: E402
+    coupled_mc_step,
+    coupled_metropolis_step,
+    metropolis_step,
+    monte_carlo_step,
+    propose_move,
+)
 from potts import initialize_lattice, total_energy  # noqa: E402
-from simulation import Snapshot, run_pure_growth  # noqa: E402
+from simulation import Snapshot, run_coupled_simulation, run_pure_growth  # noqa: E402
 
 
 def test_propose_move_returns_neighbor_orientation():
@@ -171,3 +177,108 @@ def test_parabolic_growth_law_holds_approximately():
     r_squared = 1.0 - ss_res / ss_tot
     assert slope > 0
     assert r_squared > 0.9
+
+
+# ---------------------------------------------------------------------------
+# coupled MC step + run_coupled_simulation
+# ---------------------------------------------------------------------------
+
+def test_coupled_step_with_zero_solute_accepts_energy_lowering_moves():
+    # With C = 0 the drag factor is 1, so coupled acceptance reduces to the
+    # standard Metropolis rule. A lone defect surrounded by like neighbors
+    # has dE < 0 when flipped, so it must be accepted on the first attempt
+    # regardless of kT. (Bitwise equality with the uncoupled version is
+    # not testable because the two RNG streams diverge: the uncoupled
+    # version short-circuits without drawing on auto-accepts.)
+    lat = np.full((5, 5), 1, dtype=np.int32)
+    lat[2, 2] = 2
+    C = np.zeros_like(lat, dtype=float)
+    rng = np.random.default_rng(0)
+    accepted = coupled_metropolis_step(lat, C, 2, 2, kT=1e-12, rng=rng)
+    assert accepted
+    assert lat[2, 2] == 1
+
+
+def test_coupled_step_with_zero_solute_high_kT_high_acceptance():
+    # At kT -> infty with C = 0, every non-trivial proposal is accepted (drag = 1, p_potts ≈ 1).
+    rng = np.random.default_rng(123)
+    lat = initialize_lattice(L=16, Q=8, rng=rng)
+    C = np.zeros_like(lat, dtype=float)
+    attempts = 0
+    accepted = 0
+    for _ in range(2000):
+        i = int(rng.integers(0, 16))
+        j = int(rng.integers(0, 16))
+        if len({lat[a, b] for a, b in [
+            ((i - 1) % 16, j), ((i + 1) % 16, j),
+            (i, (j - 1) % 16), (i, (j + 1) % 16),
+        ]} - {lat[i, j]}) == 0:
+            continue
+        attempts += 1
+        if coupled_metropolis_step(lat, C, i, j, kT=1e6, rng=rng):
+            accepted += 1
+    assert attempts > 100
+    assert accepted / attempts > 0.99
+
+
+def test_coupled_step_with_unit_solute_blocks_all_moves():
+    # C = 1 -> drag factor = 0, no move can ever be accepted.
+    rng = np.random.default_rng(0)
+    lat = initialize_lattice(L=10, Q=4, rng=rng)
+    before = lat.copy()
+    C_full = np.ones_like(lat, dtype=float)
+    accepted = coupled_mc_step(lat, C_full, kT=10.0, rng=rng)
+    assert accepted == 0
+    assert np.array_equal(lat, before)
+
+
+def test_coupled_metropolis_step_blocks_at_full_solute():
+    # Even an energy-lowering move (lone defect surrounded by 1s) is blocked
+    # if the local solute concentration is 1.
+    lat = np.full((5, 5), 1, dtype=np.int32)
+    lat[2, 2] = 2
+    C = np.ones_like(lat, dtype=float)
+    rng = np.random.default_rng(0)
+    accepted = coupled_metropolis_step(lat, C, 2, 2, kT=1.0, rng=rng)
+    assert not accepted
+    assert lat[2, 2] == 2
+
+
+def test_drag_slows_grain_growth():
+    # Compare diameter growth under pure growth vs. heavy solute drag with
+    # strong segregation. Drag run should end with smaller mean diameter.
+    pure = run_pure_growth(L=32, Q=24, kT=0.5, n_mcs=40, snapshot_interval=40,
+                           seed=5, record_lattice=False)
+    drag = run_coupled_simulation(
+        L=32, Q=24, kT=0.5, C_bulk=0.5, E_seg=-2.0, D_sol=0.1,
+        n_mcs=40, snapshot_interval=40, seed=5, record_lattice=False,
+    )
+    assert drag[-1].mean_diameter < pure[-1].mean_diameter
+
+
+def test_run_coupled_simulation_conserves_total_solute():
+    history = run_coupled_simulation(
+        L=20, Q=8, kT=0.5, C_bulk=0.1, E_seg=-1.0, D_sol=0.1,
+        n_mcs=15, snapshot_interval=5, seed=0, record_lattice=False,
+    )
+    totals = [snap.total_solute for snap in history]
+    assert all(abs(t - totals[0]) < 1e-9 for t in totals)
+
+
+def test_run_coupled_simulation_records_C_field_when_requested():
+    history = run_coupled_simulation(
+        L=12, Q=4, kT=0.5, C_bulk=0.05, E_seg=-1.0, D_sol=0.1,
+        n_mcs=4, snapshot_interval=2, seed=0, record_lattice=True,
+    )
+    assert all(snap.C_field is not None for snap in history)
+    assert all(snap.C_field.shape == (12, 12) for snap in history)
+
+
+def test_run_coupled_simulation_zero_diffusion_runs_without_error():
+    history = run_coupled_simulation(
+        L=10, Q=4, kT=0.5, C_bulk=0.05, E_seg=-1.0, D_sol=0.0,
+        n_mcs=5, snapshot_interval=5, seed=0, record_lattice=False,
+    )
+    # Solute should still be conserved across pure-segregation steps.
+    totals = [snap.total_solute for snap in history]
+    assert all(abs(t - totals[0]) < 1e-9 for t in totals)
