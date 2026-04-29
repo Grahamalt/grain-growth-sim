@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "code"))
 
 from mc_step import metropolis_step, monte_carlo_step, propose_move  # noqa: E402
 from potts import initialize_lattice, total_energy  # noqa: E402
+from simulation import Snapshot, run_pure_growth  # noqa: E402
 
 
 def test_propose_move_returns_neighbor_orientation():
@@ -101,3 +102,72 @@ def test_uniform_lattice_stays_uniform():
     lat = np.full((8, 8), 3, dtype=np.int32)
     monte_carlo_step(lat, kT=1.0, rng=rng)
     assert (lat == 3).all()
+
+
+# ---------------------------------------------------------------------------
+# simulation.run_pure_growth
+# ---------------------------------------------------------------------------
+
+def test_run_pure_growth_returns_snapshots_with_expected_steps():
+    history = run_pure_growth(L=8, Q=4, kT=0.5, n_mcs=10,
+                              snapshot_interval=5, seed=0)
+    steps = [snap.step for snap in history]
+    # Expect snapshots at step 0, 5, 10. Step 10 is the final step (also matches interval).
+    assert steps == [0, 5, 10]
+    for snap in history:
+        assert isinstance(snap, Snapshot)
+        assert snap.lattice.shape == (8, 8)
+        assert snap.num_grains >= 1
+
+
+def test_run_pure_growth_records_final_step_even_if_off_interval():
+    history = run_pure_growth(L=6, Q=4, kT=0.5, n_mcs=7,
+                              snapshot_interval=5, seed=1)
+    steps = [snap.step for snap in history]
+    assert steps[0] == 0
+    assert steps[-1] == 7
+    assert 5 in steps
+
+
+def test_run_pure_growth_can_omit_lattice():
+    history = run_pure_growth(L=8, Q=4, kT=0.5, n_mcs=4,
+                              snapshot_interval=2, seed=0,
+                              record_lattice=False)
+    for snap in history:
+        assert snap.lattice is None
+        assert snap.mean_diameter >= 0.0
+
+
+def test_run_pure_growth_zero_steps_returns_initial_snapshot():
+    history = run_pure_growth(L=8, Q=4, kT=0.5, n_mcs=0,
+                              snapshot_interval=1, seed=0)
+    assert len(history) == 1
+    assert history[0].step == 0
+
+
+def test_grain_growth_coarsens_diameter_increases():
+    # Over enough sweeps at moderate kT the mean grain diameter should grow.
+    history = run_pure_growth(L=32, Q=24, kT=0.5, n_mcs=40,
+                              snapshot_interval=10, seed=0,
+                              record_lattice=False)
+    diameters = [snap.mean_diameter for snap in history]
+    assert diameters[-1] > diameters[0]
+    # And the number of grains should drop as they merge.
+    assert history[-1].num_grains < history[0].num_grains
+
+
+def test_parabolic_growth_law_holds_approximately():
+    # ⟨D⟩^2 vs MCS should be roughly linear with positive slope.
+    history = run_pure_growth(L=48, Q=32, kT=0.5, n_mcs=60,
+                              snapshot_interval=10, seed=2,
+                              record_lattice=False)
+    steps = np.array([snap.step for snap in history], dtype=float)
+    d2 = np.array([snap.mean_diameter ** 2 for snap in history])
+    # Linear fit; require positive slope and a high R^2 for parabolic growth.
+    slope, intercept = np.polyfit(steps, d2, 1)
+    fit = slope * steps + intercept
+    ss_res = ((d2 - fit) ** 2).sum()
+    ss_tot = ((d2 - d2.mean()) ** 2).sum()
+    r_squared = 1.0 - ss_res / ss_tot
+    assert slope > 0
+    assert r_squared > 0.9
