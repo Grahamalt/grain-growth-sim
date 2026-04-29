@@ -25,6 +25,7 @@ from plotting import (
     plot_evolution_panels,
     plot_grain_size_distribution,
     plot_microstructure_scattering_grid,
+    plot_showcase_figure,
 )
 from simulation import run_coupled_simulation, run_pure_growth
 
@@ -229,6 +230,61 @@ def exp_design_and_attenuation(out_dir):
 # Experiment 8 - showcase 3x2 grid
 # ---------------------------------------------------------------------------
 
+def exp_showcase_figure(out_dir):
+    """Phase 3.3 showcase: 3 dopant cases with consistent colormaps and a caption.
+
+    Parameters chosen after a probe sweep so the three cases are visually
+    distinct (D approximately 15, 12, 8 lattice units) at fixed simulation
+    time, dropout temperature, and segregation energy.
+    """
+    L, Q, kT = 96, 48, 0.5
+    n_mcs = 300
+    E_seg, D_sol = -2.5, 0.1
+    cases_spec = [
+        ("low dopant: C = 0.05", 0.05),
+        ("medium dopant: C = 0.20", 0.20),
+        ("high dopant: C = 0.40", 0.40),
+    ]
+    cases = []
+    for label, C in cases_spec:
+        h = run_coupled_simulation(
+            L=L, Q=Q, kT=kT, C_bulk=C, E_seg=E_seg, D_sol=D_sol,
+            n_mcs=n_mcs, snapshot_interval=n_mcs,
+            seed=0, record_lattice=True,
+        )
+        last = h[-1]
+        cases.append(dict(
+            label=label,
+            mean_diameter=float(last.mean_diameter),
+            mu_eff=float(effective_attenuation_coefficient(last.lattice)),
+            lattice=last.lattice,
+        ))
+
+    caption = (
+        "Simulated microstructure (top row) and optical scattering intensity field "
+        "(bottom row) for three dopant concentrations after 300 Monte Carlo sweeps "
+        "(L = 96, Q = 48, kT = 0.5, E_seg = -2.5, D_sol = 0.1). As dopant "
+        "concentration increases, solute drag reduces the mean grain size, "
+        "producing a denser network of grain boundaries and correspondingly "
+        "stronger optical scattering. The scattering field is computed as a "
+        "Gaussian convolution (sigma = 2.5 lattice units) of the binary grain-"
+        "boundary map; absolute values are illustrative only."
+    )
+
+    plot_showcase_figure(
+        cases,
+        _paths(out_dir, "showcase_figure", "fig"),
+        sigma=2.5,
+        caption=caption,
+        title="Microstructure and optical scattering vs dopant concentration",
+    )
+    np.savez(_paths(out_dir, "showcase_figure", "data"),
+             C=np.array([0.05, 0.20, 0.40]),
+             mean_diameter=np.array([c["mean_diameter"] for c in cases]),
+             mu_eff=np.array([c["mu_eff"] for c in cases]))
+    return dict(cases=[(c["label"], c["mean_diameter"], c["mu_eff"]) for c in cases])
+
+
 def exp_evolution_panels(out_dir):
     """Phase 3.2: representative coupled run with snapshots at early/mid/late MCS."""
     p = DEFAULTS
@@ -311,6 +367,11 @@ def run_all(out_dir):
     print("[3.2] microstructure + solute evolution panels...")
     summary["exp_evolution"] = exp_evolution_panels(out_dir)
     print(f"    snapshots at steps {summary['exp_evolution']['steps']}")
+
+    print("[3.3] showcase figure...")
+    summary["showcase"] = exp_showcase_figure(out_dir)
+    for label, D, mu in summary["showcase"]["cases"]:
+        print(f"    {label}: <D>={D:.2f}, mu_eff={mu:.3e}")
 
     # exp3.histories carries lattice=None copies; drop before returning to keep summary small.
     summary["exp3"].pop("histories", None)

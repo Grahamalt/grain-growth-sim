@@ -174,6 +174,66 @@ def plot_evolution_panels(snapshots, out_path,
     return out_path
 
 
+def plot_showcase_figure(cases, out_path, sigma=2.5,
+                         caption=None,
+                         title="Microstructure and optical scattering vs dopant concentration"):
+    """Polished 3x2 showcase: microstructure (top) and scattering field (bottom).
+
+    ``cases`` is a list of dicts with keys: ``label`` (e.g. "C = 0.2"),
+    ``mean_diameter``, ``mu_eff``, ``lattice``. The scattering color
+    scale is shared across all columns so the dopant-trade-off is
+    visually comparable. ``caption`` is rendered beneath the figure.
+    """
+    _ensure_parent(out_path)
+    n = len(cases)
+    fields = [scattering_intensity_field(c["lattice"], sigma=sigma) for c in cases]
+    field_max = max(f.max() for f in fields)
+
+    fig, axes = plt.subplots(2, n, figsize=(4.2 * n, 8.5))
+    if n == 1:
+        axes = np.array([[axes[0]], [axes[1]]])
+
+    for k, (case, field) in enumerate(zip(cases, fields)):
+        ax_top = axes[0, k]
+        ax_bot = axes[1, k]
+        ax_top.imshow(case["lattice"], cmap="tab20", interpolation="nearest")
+        ax_top.set_title(case["label"], fontsize=13, fontweight="bold")
+        ax_top.set_xticks([]); ax_top.set_yticks([])
+
+        im = ax_bot.imshow(field, cmap="inferno", interpolation="nearest",
+                           vmin=0.0, vmax=field_max)
+        ax_bot.set_xticks([]); ax_bot.set_yticks([])
+
+        sub = (f"<D> = {case['mean_diameter']:.1f} lattice units\n"
+               f"mu_eff = {case['mu_eff']:.2e} (1/lattice unit)")
+        ax_bot.set_xlabel(sub, fontsize=10)
+
+    axes[0, 0].set_ylabel("Microstructure", fontsize=12)
+    axes[1, 0].set_ylabel("Scattering intensity (a.u.)", fontsize=12)
+
+    # Shared colorbar for the scattering row.
+    cbar_ax = fig.add_axes([0.92, 0.10, 0.015, 0.36])
+    sm = plt.cm.ScalarMappable(cmap="inferno",
+                               norm=plt.Normalize(vmin=0.0, vmax=field_max))
+    fig.colorbar(sm, cax=cbar_ax, label="Scattering intensity (a.u.)")
+
+    fig.suptitle(title, fontsize=14)
+
+    if caption is not None:
+        # Wrapped caption rendered below the panels.
+        fig.text(0.04, 0.02, caption, fontsize=9, wrap=True,
+                 ha="left", va="bottom", style="italic")
+        bottom = 0.18
+    else:
+        bottom = 0.08
+
+    fig.subplots_adjust(left=0.05, right=0.90, top=0.92, bottom=bottom,
+                        wspace=0.05, hspace=0.05)
+    fig.savefig(out_path, dpi=160)
+    plt.close(fig)
+    return out_path
+
+
 def plot_microstructure_scattering_grid(cases, out_path, sigma=2.0,
                                         title="Microstructure and scattering"):
     """``cases`` is a list of (label, lattice) tuples (length 3 expected)."""
