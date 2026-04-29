@@ -22,6 +22,7 @@ from plotting import (
     plot_design_curve,
     plot_diameter_vs_time_multi,
     plot_drag_curve,
+    plot_evolution_panels,
     plot_grain_size_distribution,
     plot_microstructure_scattering_grid,
 )
@@ -228,6 +229,35 @@ def exp_design_and_attenuation(out_dir):
 # Experiment 8 - showcase 3x2 grid
 # ---------------------------------------------------------------------------
 
+def exp_evolution_panels(out_dir):
+    """Phase 3.2: representative coupled run with snapshots at early/mid/late MCS."""
+    p = DEFAULTS
+    n_mcs = p["n_mcs"]
+    # Capture a snapshot every 10 MCS (cheap), then pick four representative ones.
+    history = run_coupled_simulation(
+        L=p["L"], Q=p["Q"], kT=p["kT"], C_bulk=0.05,
+        E_seg=-1.5, D_sol=0.1,
+        n_mcs=n_mcs, snapshot_interval=10,
+        seed=p["seed"], record_lattice=True,
+    )
+    target_steps = [0, n_mcs // 8, n_mcs // 2, n_mcs]
+    chosen = []
+    for t in target_steps:
+        snap = min(history, key=lambda s: abs(s.step - t))
+        chosen.append(snap)
+    plot_evolution_panels(
+        chosen, _paths(out_dir, "exp_evolution_panels", "fig"),
+        title=("Microstructure and solute evolution "
+               "(C_bulk=0.05, E_seg=-1.5, D_sol=0.1)"),
+    )
+    np.savez(_paths(out_dir, "exp_evolution_panels", "data"),
+             steps=np.array([s.step for s in chosen]),
+             mean_diameter=np.array([s.mean_diameter for s in chosen]),
+             total_solute=np.array([s.total_solute for s in chosen]))
+    return dict(steps=[s.step for s in chosen],
+                mean_diameter=[s.mean_diameter for s in chosen])
+
+
 def exp_showcase_grid(out_dir, design_results):
     final_lattices = design_results["final_lattices"]
     cases = [
@@ -277,6 +307,10 @@ def run_all(out_dir):
 
     print("[8/8] showcase microstructure/scattering grid...")
     summary["exp8"] = exp_showcase_grid(out_dir, summary["exp6_7"])
+
+    print("[3.2] microstructure + solute evolution panels...")
+    summary["exp_evolution"] = exp_evolution_panels(out_dir)
+    print(f"    snapshots at steps {summary['exp_evolution']['steps']}")
 
     # exp3.histories carries lattice=None copies; drop before returning to keep summary small.
     summary["exp3"].pop("histories", None)

@@ -138,6 +138,42 @@ def plot_attenuation_vs_concentration(C_values, mu_eff, out_path,
     return out_path
 
 
+def plot_evolution_panels(snapshots, out_path,
+                          title="Microstructure and solute evolution"):
+    """2 x N panels: top row = orientation maps, bottom row = solute field.
+
+    ``snapshots`` is an iterable of Snapshot objects (each must carry both
+    ``lattice`` and ``C_field``). One column per snapshot.
+    """
+    _ensure_parent(out_path)
+    snaps = list(snapshots)
+    n = len(snaps)
+    fig, axes = plt.subplots(2, n, figsize=(3.6 * n, 7.0))
+    if n == 1:
+        axes = np.array([[axes[0]], [axes[1]]])
+    # Use a single shared color scale for the solute panels so the
+    # boundary build-up is comparable across times.
+    c_max = max(snap.C_field.max() for snap in snaps if snap.C_field is not None)
+    for k, snap in enumerate(snaps):
+        ax_top = axes[0, k]
+        ax_bot = axes[1, k]
+        ax_top.imshow(snap.lattice, cmap="tab20", interpolation="nearest")
+        ax_top.set_title(f"MCS = {snap.step}\n<D> = {snap.mean_diameter:.1f}, "
+                         f"N = {snap.num_grains}", fontsize=9)
+        ax_top.set_xticks([]); ax_top.set_yticks([])
+        im = ax_bot.imshow(snap.C_field, cmap="viridis",
+                           interpolation="nearest", vmin=0.0, vmax=c_max)
+        ax_bot.set_xticks([]); ax_bot.set_yticks([])
+        plt.colorbar(im, ax=ax_bot, fraction=0.046, pad=0.04)
+    axes[0, 0].set_ylabel("Microstructure", fontsize=11)
+    axes[1, 0].set_ylabel("Solute field C(x, y)", fontsize=11)
+    fig.suptitle(title)
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=140)
+    plt.close(fig)
+    return out_path
+
+
 def plot_microstructure_scattering_grid(cases, out_path, sigma=2.0,
                                         title="Microstructure and scattering"):
     """``cases`` is a list of (label, lattice) tuples (length 3 expected)."""
