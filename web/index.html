@@ -28,7 +28,7 @@
     <strong>Solute drag in grain growth</strong>
     <span class="topbar-tagline">Dopant effects on transparent ceramics in scintillating fibers.</span>
   </div>
-  <a class="repo-link" href="https://github.com/Grahamalt/grain-growth-sim"
+  <a class="repo-link" href="https://github.com/Grahamalt/potts-grain-growth"
      aria-label="GitHub repository">GitHub &#8599;</a>
 </header>
 
@@ -247,7 +247,7 @@
       <!-- METHODS -->
       <article role="tabpanel" id="tab-methods" aria-labelledby="t-methods" hidden>
         <p>How each piece was built, in plain language. All Python, all in
-           <a href="https://github.com/Grahamalt/grain-growth-sim">the repo</a>.</p>
+           <a href="https://github.com/Grahamalt/potts-grain-growth">the repo</a>.</p>
         <ul class="methods-list">
           <li><strong>The lattice (<code>potts.py</code>).</strong> A 64&times;64
               grid of integers between 1 and 48. Each integer is a grain
@@ -291,11 +291,6 @@
               equilibrium ratios, Cahn-style drag shape, the parabolic growth
               law, and the &mu;_eff &prop; 1/&lang;D&rang; scaling.</li>
         </ul>
-        <pre><code>git clone https://github.com/Grahamalt/grain-growth-sim.git
-cd grain-growth-sim
-pip install numpy scipy matplotlib pytest
-python code/main.py        # regenerates every figure (~35 s)
-python -m pytest tests/    # 67 tests</code></pre>
       </article>
 
     </div>
