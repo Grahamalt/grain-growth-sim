@@ -43,8 +43,11 @@
 <!-- ============================================================ -->
 <!-- Sticky navigation                                            -->
 <!-- ============================================================ -->
-<nav id="site-nav">
-  <ul>
+<nav id="site-nav" aria-label="Section navigation">
+  <button id="nav-toggle" type="button"
+          aria-controls="site-nav-list" aria-expanded="false"
+          aria-label="Toggle navigation menu">Sections &#9776;</button>
+  <ul id="site-nav-list">
     <li><a href="#tldr">TL;DR</a></li>
     <li><a href="#motivation">Motivation</a></li>
     <li><a href="#theory">Theory</a></li>
