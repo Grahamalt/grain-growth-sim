@@ -39,7 +39,7 @@ def plot_d2_vs_t(steps, mean_diameter, out_path, slope=None, intercept=None,
     ax.set_title(title)
     ax.legend()
     fig.tight_layout()
-    fig.savefig(out_path, dpi=140)
+    fig.savefig(out_path, dpi=300)
     plt.close(fig)
     return out_path
 
@@ -57,7 +57,7 @@ def plot_grain_size_distribution(sizes, out_path,
     ax.set_ylabel("Probability density")
     ax.set_title(title)
     fig.tight_layout()
-    fig.savefig(out_path, dpi=140)
+    fig.savefig(out_path, dpi=300)
     plt.close(fig)
     return out_path
 
@@ -75,7 +75,7 @@ def plot_diameter_vs_time_multi(histories_by_label, out_path,
     ax.set_title(title)
     ax.legend(fontsize=8)
     fig.tight_layout()
-    fig.savefig(out_path, dpi=140)
+    fig.savefig(out_path, dpi=300)
     plt.close(fig)
     return out_path
 
@@ -105,7 +105,7 @@ def plot_drag_curve(v, F, out_path, title="Solute drag curve: F_i vs v"):
     ax.set_title(title)
     ax.legend(fontsize=8)
     fig.tight_layout()
-    fig.savefig(out_path, dpi=140)
+    fig.savefig(out_path, dpi=300)
     plt.close(fig)
     return out_path
 
@@ -119,7 +119,7 @@ def plot_design_curve(C_values, final_D, out_path,
     ax.set_ylabel("Final mean grain diameter <D>")
     ax.set_title(title)
     fig.tight_layout()
-    fig.savefig(out_path, dpi=140)
+    fig.savefig(out_path, dpi=300)
     plt.close(fig)
     return out_path
 
@@ -133,7 +133,23 @@ def plot_attenuation_vs_concentration(C_values, mu_eff, out_path,
     ax.set_ylabel("Effective attenuation coefficient mu_eff (1/lattice unit)")
     ax.set_title(title)
     fig.tight_layout()
-    fig.savefig(out_path, dpi=140)
+    fig.savefig(out_path, dpi=300)
+    plt.close(fig)
+    return out_path
+
+
+def plot_lattice_snapshot(snapshot, out_path, title=None):
+    """Single-frame microstructure snapshot suitable for an animation series."""
+    _ensure_parent(out_path)
+    fig, ax = plt.subplots(figsize=(5.5, 5.5))
+    ax.imshow(snapshot.lattice, cmap="tab20", interpolation="nearest")
+    if title is None:
+        title = (f"MCS = {snapshot.step}, <D> = {snapshot.mean_diameter:.1f}, "
+                 f"N = {snapshot.num_grains}")
+    ax.set_title(title, fontsize=11)
+    ax.set_xticks([]); ax.set_yticks([])
+    fig.tight_layout()
+    fig.savefig(out_path, dpi=300)
     plt.close(fig)
     return out_path
 
@@ -169,7 +185,7 @@ def plot_evolution_panels(snapshots, out_path,
     axes[1, 0].set_ylabel("Solute field C(x, y)", fontsize=11)
     fig.suptitle(title)
     fig.tight_layout()
-    fig.savefig(out_path, dpi=140)
+    fig.savefig(out_path, dpi=300)
     plt.close(fig)
     return out_path
 
@@ -229,7 +245,7 @@ def plot_showcase_figure(cases, out_path, sigma=2.5,
 
     fig.subplots_adjust(left=0.05, right=0.90, top=0.92, bottom=bottom,
                         wspace=0.05, hspace=0.05)
-    fig.savefig(out_path, dpi=160)
+    fig.savefig(out_path, dpi=300)
     plt.close(fig)
     return out_path
 
@@ -256,6 +272,6 @@ def plot_microstructure_scattering_grid(cases, out_path, sigma=2.0,
     axes[1, 0].set_ylabel("Scattering field", fontsize=11)
     fig.suptitle(title)
     fig.tight_layout()
-    fig.savefig(out_path, dpi=140)
+    fig.savefig(out_path, dpi=300)
     plt.close(fig)
     return out_path

@@ -24,6 +24,7 @@ from plotting import (
     plot_drag_curve,
     plot_evolution_panels,
     plot_grain_size_distribution,
+    plot_lattice_snapshot,
     plot_microstructure_scattering_grid,
     plot_showcase_figure,
 )
@@ -285,6 +286,33 @@ def exp_showcase_figure(out_dir):
     return dict(cases=[(c["label"], c["mean_diameter"], c["mu_eff"]) for c in cases])
 
 
+def exp_snapshot_frames(out_dir):
+    """Phase 8 pre-flight: individual microstructure frames for an animation.
+
+    Writes 4 separate PNGs at MCS = 0, n_mcs/8, n_mcs/2, n_mcs from one
+    representative coupled run, in addition to the combined 4-panel
+    figure produced by exp_evolution_panels.
+    """
+    p = DEFAULTS
+    n_mcs = p["n_mcs"]
+    history = run_coupled_simulation(
+        L=p["L"], Q=p["Q"], kT=p["kT"], C_bulk=0.05,
+        E_seg=-1.5, D_sol=0.1,
+        n_mcs=n_mcs, snapshot_interval=10,
+        seed=p["seed"], record_lattice=True,
+    )
+    target_steps = [0, n_mcs // 8, n_mcs // 2, n_mcs]
+    out_dir_frames = os.path.join(out_dir, "figures", "snapshots")
+    os.makedirs(out_dir_frames, exist_ok=True)
+    written = []
+    for k, t in enumerate(target_steps):
+        snap = min(history, key=lambda s: abs(s.step - t))
+        path = os.path.join(out_dir_frames, f"snapshot_{k:02d}_mcs{snap.step:04d}.png")
+        plot_lattice_snapshot(snap, path)
+        written.append(path)
+    return dict(frames=written)
+
+
 def exp_evolution_panels(out_dir):
     """Phase 3.2: representative coupled run with snapshots at early/mid/late MCS."""
     p = DEFAULTS
@@ -372,6 +400,11 @@ def run_all(out_dir):
     summary["showcase"] = exp_showcase_figure(out_dir)
     for label, D, mu in summary["showcase"]["cases"]:
         print(f"    {label}: <D>={D:.2f}, mu_eff={mu:.3e}")
+
+    print("[8.0] individual snapshot frames for animation...")
+    summary["snapshots"] = exp_snapshot_frames(out_dir)
+    for f in summary["snapshots"]["frames"]:
+        print(f"    wrote {os.path.relpath(f, out_dir)}")
 
     # exp3.histories carries lattice=None copies; drop before returning to keep summary small.
     summary["exp3"].pop("histories", None)
