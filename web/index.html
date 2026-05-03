@@ -92,7 +92,7 @@
       <button role="tab" aria-selected="false" aria-controls="tab-validation" id="t-validation">Validation</button>
       <button role="tab" aria-selected="false" aria-controls="tab-results"    id="t-results">Results</button>
       <button role="tab" aria-selected="false" aria-controls="tab-time"       id="t-time">Animation</button>
-      <button role="tab" aria-selected="false" aria-controls="tab-caveats"    id="t-caveats">Caveats</button>
+      <button role="tab" aria-selected="false" aria-controls="tab-methods"    id="t-methods">Methods</button>
     </div>
 
     <div id="tabpanels">
@@ -193,22 +193,58 @@
            ~3924 grains at MCS = 0 coarsens to 31 grains by MCS = 200.</p>
       </article>
 
-      <!-- CAVEATS -->
-      <article role="tabpanel" id="tab-caveats" aria-labelledby="t-caveats" hidden>
-        <p><strong>Honest limits.</strong> 2D simulation, not 3D. Static
-           drag coefficient (qualitative Cahn shape, not quantitative).
-           Isotropic boundary energy. Optical proxy is geometric-regime
-           only &mdash; <em>relative</em> &mu;_eff is meaningful, absolute
-           values are not.</p>
-        <p><strong>Reproducibility.</strong> Seeded RNG, 67 unit tests,
-           full figure campaign in ~35 s.</p>
+      <!-- METHODS -->
+      <article role="tabpanel" id="tab-methods" aria-labelledby="t-methods" hidden>
+        <p>How each piece was built, in plain language. All Python, all in
+           <a href="https://github.com/Grahamalt/grain-growth-sim">the repo</a>.</p>
+        <ul class="methods-list">
+          <li><strong>The lattice (<code>potts.py</code>).</strong> A 64&times;64
+              grid of integers between 1 and 48. Each integer is a grain
+              orientation. Two neighboring sites with different integers count
+              as a grain boundary. The edges of the grid wrap around (a torus),
+              so there are no walls.</li>
+          <li><strong>One Monte Carlo step (<code>mc_step.py</code>).</strong>
+              Pick a site at random, pick a random neighbor's orientation, and
+              propose changing the site to it. Accept the change if it lowers
+              the energy; otherwise accept with probability
+              <code>exp(&minus;&Delta;E/kT)</code>. Repeat 64&times;64 times for
+              one "sweep."</li>
+          <li><strong>The solute field (<code>solute.py</code>).</strong> A
+              second grid of floats holding the local dopant concentration.
+              Each step it diffuses (5-point Laplacian, periodic edges) and
+              relaxes toward equilibrium &mdash; preferring the boundary sites
+              by a Boltzmann factor &mdash; while keeping the total mass
+              constant.</li>
+          <li><strong>The drag coupling (also <code>mc_step.py</code>).</strong>
+              Multiply the Metropolis acceptance probability by
+              <code>(1 &minus; C_local)</code>. High solute on a boundary site
+              means most flips get rejected, which is the drag.</li>
+          <li><strong>Grain analysis (<code>analysis.py</code>).</strong>
+              Find connected same-orientation regions with
+              <code>scipy.ndimage.label</code>, then merge any clusters that
+              touch across the wraparound seams. Each cluster's size is
+              converted to an effective diameter
+              <code>D = 2&radic;(A/&pi;)</code>.</li>
+          <li><strong>Optical proxy (<code>optical_proxy.py</code>).</strong>
+              Mark every boundary site as a 1, blur with a 2.5-pixel Gaussian
+              (the "diffraction halo"), and report the boundary fraction
+              times <code>(&delta;n)&sup2;</code>. This is a stand-in for real
+              scattering &mdash; trends are meaningful, absolute numbers are
+              not.</li>
+          <li><strong>Experiment runner (<code>experiments.py</code>,
+              <code>main.py</code>).</strong> One script that runs all 8
+              experiments at fixed seeds and writes every figure on this page
+              to <code>results/figures/</code> in about 35 seconds.</li>
+          <li><strong>Tests (<code>tests/</code>).</strong> 67 unit tests
+              covering each module: lattice invariants, mass conservation,
+              equilibrium ratios, Cahn-style drag shape, the parabolic growth
+              law, and the &mu;_eff &prop; 1/&lang;D&rang; scaling.</li>
+        </ul>
         <pre><code>git clone https://github.com/Grahamalt/grain-growth-sim.git
 cd grain-growth-sim
 pip install numpy scipy matplotlib pytest
-python code/main.py        # regenerates every figure</code></pre>
-        <p class="aside">Refs: Hillert 1965, Cahn 1962, L&uuml;cke &amp; St&uuml;we 1971,
-           Anderson et al. 1984, Holm &amp; Battaile 2001, Burke &amp; Turnbull 1952,
-           Ikesue &amp; Aung 2008.</p>
+python code/main.py        # regenerates every figure (~35 s)
+python -m pytest tests/    # 67 tests</code></pre>
       </article>
 
     </div>
