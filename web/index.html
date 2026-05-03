@@ -114,17 +114,48 @@
 
       <!-- THEORY -->
       <article role="tabpanel" id="tab-theory" aria-labelledby="t-theory" hidden>
-        <p>2D Q-state Potts lattice (L = 64, Q = 48). Site energy
-           \(E = J\sum_{N}[1-\delta_{s,s'}]\), \(J = 1\). Metropolis acceptance with
-           proposal drawn from neighbor orientations:</p>
+        <p><strong>The lattice.</strong> The ceramic is a 64&times;64 grid where each
+           cell carries an integer in {1,&hellip;,48} &mdash; its grain orientation.
+           Same-integer neighbors are in the same grain; mismatched neighbors mark a
+           grain boundary. Each unlike-neighbor pair costs an energy
+           \(J = 1\):</p>
+        <p>$$E_\text{site} = J \sum_{N}[1 - \delta_{s,s'}]$$</p>
+        <p>So the system can lower its energy by removing boundaries &mdash; i.e. by
+           growing grains. This is the engine.</p>
+
+        <p><strong>How the lattice evolves.</strong> We use Metropolis Monte Carlo:
+           pick a random site, propose flipping it to one of its neighbors'
+           orientations, and accept by</p>
         <p>$$P_\text{accept} = \begin{cases} 1 & \Delta E \le 0 \\ e^{-\Delta E/k_B T} & \Delta E > 0\end{cases}$$</p>
-        <p>Continuous solute field \(C(i,j) \in [0,1]\) diffuses with an explicit FD Laplacian
-           (CFL guard) and segregates to boundary sites with the Boltzmann ratio
-           \(C_{GB}/C_{bulk} = e^{-E_{seg}/k_B T}\) (mass-conserving relaxation).</p>
-        <p>Drag couples solute to the MC step:
-           \(P^{coupled}_\text{accept} = P^{Potts}_\text{accept}\cdot(1-C(i,j))\).
-           The optical proxy is a Gaussian-blurred boundary map with
-           \(\mu_\text{eff} = (\delta n)^2 \cdot f_\text{boundary}\).</p>
+        <p>Energy-lowering moves always succeed; energy-raising ones are rare but
+           possible. This rule drives the slow, curvature-driven coarsening that real
+           grains do.</p>
+
+        <p><strong>The dopant.</strong> A second continuous field \(C(i,j) \in [0,1]\) lives
+           on the same grid. Each step it diffuses (a stable explicit Laplacian) and
+           relaxes toward an equilibrium where boundary sites are preferred by a
+           Boltzmann factor:</p>
+        <p>$$\frac{C_{GB}}{C_{bulk}} = e^{-E_{seg}/k_B T}$$</p>
+        <p>Total dopant mass is conserved exactly. The result is a physically
+           reasonable picture: dopant pools at grain boundaries, just like real
+           segregating impurities do.</p>
+
+        <p><strong>Coupling: how the dopant slows things down.</strong> To make the
+           dopant actually <em>do</em> something, we multiply the Metropolis acceptance
+           by a local drag factor:</p>
+        <p>$$P^{coupled}_\text{accept} = P^{Potts}_\text{accept}\cdot(1 - C(i,j))$$</p>
+        <p>A boundary site soaked in dopant rarely flips, so heavily decorated
+           boundaries effectively stop moving. This reproduces the shape of Cahn
+           solute drag without solving the full integral.</p>
+
+        <p><strong>The optical proxy.</strong> Each grain boundary is a small
+           refractive-index step, so it scatters light. We approximate the scattering
+           field by Gaussian-blurring the boundary map (&sigma; = 2.5) and report a
+           single number:</p>
+        <p>$$\mu_\text{eff} = (\delta n)^2 \cdot f_\text{boundary}$$</p>
+        <p>where \(f_\text{boundary}\) is the fraction of sites on a boundary. This
+           is geometric-regime only &mdash; the trends with grain size are meaningful,
+           but the absolute attenuation numbers are not.</p>
       </article>
 
       <!-- VALIDATION -->
