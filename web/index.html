@@ -360,11 +360,47 @@
 <section id="showcase">
   <h2>The showcase visualization</h2>
 
-  <figure id="showcase-figure">
-    <img src="assets/figures/showcase_3x2.png"
-         alt="Three-by-two grid: top row shows microstructure for low, medium, and high dopant; bottom row shows the corresponding scattering intensity field, with a shared color scale.">
-    <figcaption><strong>Caption.</strong> <em>Simulated microstructure (top row) and optical scattering intensity field (bottom row) for three dopant concentrations after 300 Monte Carlo sweeps (L = 96, Q = 48, kT = 0.5, E_seg = &minus;2.5, D_sol = 0.1). As dopant concentration increases from C = 0.05 to C = 0.40, solute drag reduces the mean grain size from &lang;D&rang; &asymp; 15.5 to &lang;D&rang; &asymp; 7.9, producing a denser network of grain boundaries and correspondingly stronger optical scattering (&mu;_eff rises from 2.2e&minus;5 to 4.2e&minus;5 inverse lattice units, a factor of ~2). The scattering field is computed as a Gaussian convolution (&sigma; = 2.5 lattice units) of the binary grain-boundary map; absolute values are illustrative only.</em></figcaption>
-  </figure>
+  <div id="showcase-interactive" class="interactive-figure">
+    <div class="view-toggle" role="group" aria-label="View toggle">
+      <button type="button" class="toggle-btn active"
+              data-view="micro"
+              aria-pressed="true">Microstructure</button>
+      <button type="button" class="toggle-btn"
+              data-view="scat"
+              aria-pressed="false">Scattering proxy</button>
+    </div>
+
+    <figure id="showcase-figure">
+      <img id="showcase-img"
+           src="assets/figures/showcase_low_microstructure.png"
+           alt="Showcase microstructure for the low-dopant case (C_bulk = 0.05).">
+      <figcaption id="showcase-caption">
+        <strong>C_bulk = 0.05</strong> &middot;
+        &lang;D&rang; = 15.5 lattice units &middot;
+        &mu;_eff = 2.15&times;10<sup>&minus;5</sup> (1/lattice unit, illustrative)
+      </figcaption>
+    </figure>
+
+    <div class="dopant-slider">
+      <label for="dopant-range">Dopant concentration C_bulk</label>
+      <input id="dopant-range" type="range" min="0" max="2" step="1" value="0"
+             aria-valuemin="0" aria-valuemax="2" aria-valuenow="0"
+             aria-label="Dopant concentration step">
+      <div class="slider-stops" aria-hidden="true">
+        <span class="stop active">low &middot; C = 0.05</span>
+        <span class="stop">medium &middot; C = 0.20</span>
+        <span class="stop">high &middot; C = 0.40</span>
+      </div>
+    </div>
+
+    <p class="figure-context"><em>Move the slider to compare the three dopant
+       cases; toggle the view to switch between the orientation map and the
+       Gaussian-convolved scattering intensity field. The scattering color
+       scale is shared across all three dopant levels so brightness
+       differences are real, not an artefact. Parameters: L = 96, Q = 48,
+       kT = 0.5, E_seg = &minus;2.5, D_sol = 0.1, 300 MCS. Absolute &mu;_eff
+       values are illustrative only.</em></p>
+  </div>
 
   <p><strong>Discussion.</strong> This figure makes the trade-off visually immediate:</p>
   <ul>
@@ -376,6 +412,25 @@
   <p>For a real scintillator, the bottom row of this figure represents the photon's experience: a relatively transparent slab on the left, a heavily scattering one on the right. The activator-loading lever visibly trades light yield against transparency. This is the central qualitative finding the project was set up to demonstrate.</p>
 
   <p>The same shared color scale across the bottom row makes the comparison honest &mdash; the brightness in the high-dopant panel is <em>not</em> just a colormap artefact, it is a real ~2&times; rise in &mu;_eff.</p>
+
+  <h3>Grain growth in time</h3>
+  <p>Four snapshots from one representative coupled run (C_bulk = 0.05, E_seg = &minus;1.5). Use the controls to scrub through MCS or play the sequence as an animation.</p>
+
+  <div id="growth-animation" class="interactive-figure"
+       data-frames="assets/figures/snapshots/snapshot_00_mcs0000.png|0,assets/figures/snapshots/snapshot_01_mcs0020.png|20,assets/figures/snapshots/snapshot_02_mcs0100.png|100,assets/figures/snapshots/snapshot_03_mcs0200.png|200">
+    <figure>
+      <img id="growth-img"
+           src="assets/figures/snapshots/snapshot_00_mcs0000.png"
+           alt="Grain microstructure at the selected Monte Carlo sweep.">
+      <figcaption id="growth-caption">MCS = 0</figcaption>
+    </figure>
+    <div class="animation-controls">
+      <button type="button" id="growth-play" aria-label="Play animation">&#9654; Play</button>
+      <input id="growth-range" type="range" min="0" max="3" step="1" value="0"
+             aria-label="Monte Carlo sweep step">
+      <span id="growth-step" class="growth-step">step 1 of 4</span>
+    </div>
+  </div>
 </section>
 
 <!-- ============================================================ -->

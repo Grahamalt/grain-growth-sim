@@ -290,6 +290,172 @@ figcaption strong { font-style: normal; color: var(--text); }
   box-shadow: 0 4px 24px rgba(0,0,0,0.06);
 }
 
+/* ---------- Interactive figures (showcase slider, animation) ---------- */
+
+.interactive-figure {
+  margin: 2rem 0 2.5rem;
+  padding: 1.25rem;
+  background: var(--bg-soft);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+}
+
+.interactive-figure figure { margin: 0.5rem 0 1rem; }
+
+.interactive-figure .figure-context {
+  font-size: 0.9rem;
+  color: var(--text-soft);
+  margin: 0.5rem 0 0;
+}
+
+/* View toggle (Microstructure / Scattering proxy) */
+.view-toggle {
+  display: inline-flex;
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 3px;
+  background: var(--bg);
+  margin-bottom: 0.75rem;
+}
+.toggle-btn {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-soft);
+  background: transparent;
+  border: none;
+  padding: 0.4rem 0.95rem;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+.toggle-btn:hover { color: var(--accent); }
+.toggle-btn.active {
+  background: var(--accent);
+  color: #fff;
+}
+
+/* Dopant slider */
+.dopant-slider {
+  margin-top: 0.75rem;
+  font-family: var(--sans);
+}
+.dopant-slider label {
+  display: block;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-mute);
+  margin-bottom: 0.4rem;
+}
+.dopant-slider input[type="range"] {
+  width: 100%;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  background: var(--rule);
+  border-radius: 3px;
+  outline: none;
+}
+.dopant-slider input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  cursor: pointer;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.15);
+}
+.dopant-slider input[type="range"]::-moz-range-thumb {
+  width: 18px; height: 18px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  cursor: pointer;
+}
+.slider-stops {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 0.5rem;
+  font-size: 0.78rem;
+  color: var(--text-mute);
+}
+.slider-stops .stop { transition: color 0.15s ease, font-weight 0.15s ease; }
+.slider-stops .stop.active { color: var(--accent); font-weight: 600; }
+
+/* Animation controls */
+.animation-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-top: 0.75rem;
+  font-family: var(--sans);
+}
+#growth-play {
+  font-family: var(--sans);
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--rule);
+  border-radius: var(--radius);
+  padding: 0.4rem 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+  min-width: 5.5rem;
+}
+#growth-play:hover { color: var(--accent); border-color: var(--accent); }
+
+#growth-range {
+  flex: 1;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  background: var(--rule);
+  border-radius: 3px;
+  outline: none;
+}
+#growth-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  cursor: pointer;
+}
+#growth-range::-moz-range-thumb {
+  width: 16px; height: 16px;
+  border-radius: 50%;
+  background: var(--accent);
+  border: 2px solid var(--bg);
+  cursor: pointer;
+}
+.growth-step {
+  font-size: 0.8rem;
+  color: var(--text-mute);
+  white-space: nowrap;
+  min-width: 6.5rem;
+  text-align: right;
+}
+
+/* Showcase image inside the interactive frame */
+#showcase-interactive #showcase-img {
+  max-width: min(100%, 520px);
+  margin: 0 auto;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  background: var(--bg);
+}
+#growth-animation #growth-img {
+  max-width: min(100%, 460px);
+  margin: 0 auto;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  background: var(--bg);
+}
+
 /* ---------- Equations (MathJax) ---------- */
 
 mjx-container[display="true"] {
