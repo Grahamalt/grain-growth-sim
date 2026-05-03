@@ -300,6 +300,35 @@ pre code { background: none; padding: 0; font-size: inherit; }
   margin-top: 0.6rem;
 }
 
+/* Plot notes (per-figure plain-language descriptions) */
+.plot-notes {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  column-gap: 0.85rem;
+  row-gap: 0.4rem;
+  margin: 0.7rem 0 0.4rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+.plot-notes dt {
+  font-family: var(--sans);
+  font-size: 0.78rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--accent);
+  padding-top: 0.1rem;
+}
+.plot-notes dd { margin: 0; color: var(--text); }
+
+.plot-notes-single {
+  font-size: 0.92rem;
+  line-height: 1.5;
+  margin: 0.6rem 0 0.4rem;
+  padding-left: 0.75rem;
+  border-left: 2px solid var(--rule);
+}
+
 /* Methods list */
 .methods-list {
   list-style: none;
