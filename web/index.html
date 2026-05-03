@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Solute drag in grain growth — dopant effects on transparent ceramics in scintillating fibers</title>
+  <title>Solute drag in grain growth: dopant effects on transparent ceramics in scintillating fibers</title>
   <meta name="description"
         content="A 2D Potts-model simulation of grain growth with solute drag and an optical scattering proxy for transparent ceramic scintillators.">
   <link rel="stylesheet" href="style.css">
@@ -115,12 +115,12 @@
       <!-- THEORY -->
       <article role="tabpanel" id="tab-theory" aria-labelledby="t-theory" hidden>
         <p><strong>The lattice.</strong> The ceramic is a 64&times;64 grid where each
-           cell carries an integer in {1,&hellip;,48} &mdash; its grain orientation.
+           cell carries an integer in {1,&hellip;,48}, its grain orientation.
            Same-integer neighbors are in the same grain; mismatched neighbors mark a
            grain boundary. Each unlike-neighbor pair costs an energy
            \(J = 1\):</p>
         <p>$$E_\text{site} = J \sum_{N}[1 - \delta_{s,s'}]$$</p>
-        <p>So the system can lower its energy by removing boundaries &mdash; i.e. by
+        <p>So the system can lower its energy by removing boundaries, i.e. by
            growing grains. This is the engine.</p>
 
         <p><strong>How the lattice evolves.</strong> We use Metropolis Monte Carlo:
@@ -154,7 +154,7 @@
            single number:</p>
         <p>$$\mu_\text{eff} = (\delta n)^2 \cdot f_\text{boundary}$$</p>
         <p>where \(f_\text{boundary}\) is the fraction of sites on a boundary. This
-           is geometric-regime only &mdash; the trends with grain size are meaningful,
+           is geometric-regime only. The trends with grain size are meaningful,
            but the absolute attenuation numbers are not.</p>
       </article>
 
@@ -164,26 +164,26 @@
           <figure>
             <img src="assets/figures/parabolic_growth.png"
                  alt="Mean grain diameter squared vs MCS, linear fit overlaid.">
-            <figcaption>&lang;D&rang;&sup2; vs MCS &mdash; <strong>k &asymp; 1.10, R&sup2; &asymp; 0.96</strong>.</figcaption>
+            <figcaption>&lang;D&rang;&sup2; vs MCS. <strong>k &asymp; 1.10, R&sup2; &asymp; 0.96</strong>.</figcaption>
           </figure>
           <figure>
             <img src="assets/figures/grain_size_distribution.png"
                  alt="Histogram of D over mean D, unimodal and peaked near 1.">
-            <figcaption>D / &lang;D&rang; histogram &mdash; unimodal, Hillert-like.</figcaption>
+            <figcaption>D / &lang;D&rang; histogram: unimodal, Hillert-like.</figcaption>
           </figure>
           <figure>
             <img src="assets/figures/cahn_drag_curve.png"
                  alt="Drag force vs velocity, binned mean rises to a peak.">
-            <figcaption>F vs v &mdash; binned mean shows the Cahn peak.</figcaption>
+            <figcaption>F vs v: binned mean shows the Cahn peak.</figcaption>
           </figure>
         </div>
         <dl class="plot-notes">
           <dt>Left</dt>
-          <dd>The square of the average grain size grows in a straight line with simulation time. This is the textbook parabolic growth law &mdash; the most basic check that the simulation is doing real grain growth and not something weird.</dd>
+          <dd>The square of the average grain size grows in a straight line with simulation time. This is the textbook parabolic growth law, the most basic check that the simulation is doing real grain growth and not something weird.</dd>
           <dt>Middle</dt>
           <dd>If you take every grain at the end of a run, divide its size by the average, and bin the results, you get a single peak near 1. Real polycrystals have the same shape, so the model is reproducing the right statistics, not just the right average.</dd>
           <dt>Right</dt>
-          <dd>How hard the dopant pulls back on a moving grain boundary, plotted against the boundary's speed. The peak in the middle is the classic "solute drag" signature first predicted by Cahn in 1962 &mdash; slow boundaries drag the dopant with them, fast ones outrun it, and the maximum drag happens in between.</dd>
+          <dd>How hard the dopant pulls back on a moving grain boundary, plotted against the boundary's speed. The peak in the middle is the classic "solute drag" signature first predicted by Cahn in 1962. Slow boundaries drag the dopant with them, fast ones outrun it, and the maximum drag happens in between.</dd>
         </dl>
         <p class="aside">Mass conservation, equilibrium-segregation ratio, and limit
            behaviour (C&rarr;0 recovers pure growth, C=1 freezes the lattice) are all
@@ -213,12 +213,12 @@
           <dt>Left</dt>
           <dd>Average grain size over time for six different dopant levels, from none to a lot. With no dopant the grains grow fastest; the more dopant you add, the slower the curve climbs and the smaller the final grain size.</dd>
           <dt>Middle</dt>
-          <dd>The same data boiled down to one number per run: the final grain size at fixed sintering time. This is the practical readout for a designer &mdash; pick a dopant level, read off roughly the grain size you'll end up with.</dd>
+          <dd>The same data boiled down to one number per run: the final grain size at fixed sintering time. This is the practical readout for a designer: pick a dopant level, read off roughly the grain size you'll end up with.</dd>
           <dt>Right</dt>
           <dd>The simulated optical scattering coefficient as a function of dopant. More dopant pins more boundaries, more boundaries scatter more light. The trend is monotone: every bit of activator you add costs a bit of transparency.</dd>
         </dl>
         <p class="aside">A log-log fit of &mu;_eff vs &lang;D&rang; gives slope
-           &minus;0.78 (expected &minus;1) &mdash; the simulation reproduces the
+           &minus;0.78 (expected &minus;1). The simulation reproduces the
            textbook 1/&lang;D&rang; scaling for boundary-limited scattering.</p>
       </article>
 
@@ -239,7 +239,7 @@
             <span id="growth-step" class="growth-step">step 1 of 4</span>
           </div>
         </div>
-        <p class="plot-notes-single">Each frame is the grain map at a different point during one simulation run. At MCS = 0 the lattice starts as random noise &mdash; effectively ~4000 tiny single-pixel "grains." As the simulation progresses, like-oriented neighbors merge and grain boundaries straighten out to lower the system's energy. By the last frame only ~30 grains remain, each made of hundreds of pixels. This is grain coarsening, watched in fast-forward.</p>
+        <p class="plot-notes-single">Each frame is the grain map at a different point during one simulation run. At MCS = 0 the lattice starts as random noise, effectively ~4000 tiny single-pixel "grains." As the simulation progresses, like-oriented neighbors merge and grain boundaries straighten out to lower the system's energy. By the last frame only ~30 grains remain, each made of hundreds of pixels. This is grain coarsening, watched in fast-forward.</p>
         <p class="aside">One representative coupled run (C_bulk = 0.05, E_seg = &minus;1.5).
            Use the slider to scrub by hand or hit Play to loop it.</p>
       </article>
@@ -263,8 +263,8 @@
           <li><strong>The solute field (<code>solute.py</code>).</strong> A
               second grid of floats holding the local dopant concentration.
               Each step it diffuses (5-point Laplacian, periodic edges) and
-              relaxes toward equilibrium &mdash; preferring the boundary sites
-              by a Boltzmann factor &mdash; while keeping the total mass
+              relaxes toward equilibrium (preferring the boundary sites
+              by a Boltzmann factor) while keeping the total mass
               constant.</li>
           <li><strong>The drag coupling (also <code>mc_step.py</code>).</strong>
               Multiply the Metropolis acceptance probability by
@@ -280,7 +280,7 @@
               Mark every boundary site as a 1, blur with a 2.5-pixel Gaussian
               (the "diffraction halo"), and report the boundary fraction
               times <code>(&delta;n)&sup2;</code>. This is a stand-in for real
-              scattering &mdash; trends are meaningful, absolute numbers are
+              scattering. Trends are meaningful, absolute numbers are
               not.</li>
           <li><strong>Experiment runner (<code>experiments.py</code>,
               <code>main.py</code>).</strong> One script that runs all 8
