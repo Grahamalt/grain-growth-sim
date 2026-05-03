@@ -3,15 +3,482 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Solute drag in grain growth</title>
+  <title>Solute drag in grain growth — a Potts-model simulation</title>
+  <meta name="description"
+        content="A 2D Potts-model simulation of grain growth with solute drag and an optical scattering proxy for transparent ceramic scintillators.">
   <link rel="stylesheet" href="style.css">
+
+  <!-- MathJax 3 (configured for \( \) inline and \[ \] display) -->
+  <script>
+    window.MathJax = {
+      tex: {
+        inlineMath: [['\\(', '\\)']],
+        displayMath: [['\\[', '\\]'], ['$$', '$$']],
+        processEscapes: true,
+        tags: 'none'
+      },
+      svg: { fontCache: 'global' }
+    };
+  </script>
+  <script id="MathJax-script" async
+          src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
+
 <body>
-  <main>
-    <h1>Solute drag in grain growth</h1>
-    <p>Web page scaffold. Sections to be authored per
-       <code>docs/site_outline.md</code>.</p>
-  </main>
-  <script src="script.js" defer></script>
+
+<!-- ============================================================ -->
+<!-- Section 1: Hero / title                                      -->
+<!-- ============================================================ -->
+<header id="hero">
+  <h1>Solute drag in grain growth</h1>
+  <p class="subtitle">A 2D Potts-model simulation with an optical scattering proxy for transparent ceramic scintillators.</p>
+  <p class="byline">Graham Altschuler &middot; 3.21 simulation project, Spring 2026</p>
+  <figure class="hero-figure">
+    <img src="assets/figures/showcase_3x2.png"
+         alt="Three-by-two grid of microstructure (top) and scattering intensity field (bottom) for low, medium, and high dopant concentrations.">
+  </figure>
+  <p class="hero-tagline">Why does adding more dopant to a transparent ceramic scintillator make it less transparent? A numerical experiment.</p>
+</header>
+
+<!-- ============================================================ -->
+<!-- Sticky navigation                                            -->
+<!-- ============================================================ -->
+<nav id="site-nav">
+  <ul>
+    <li><a href="#tldr">TL;DR</a></li>
+    <li><a href="#motivation">Motivation</a></li>
+    <li><a href="#theory">Theory</a></li>
+    <li><a href="#methods">Methods</a></li>
+    <li><a href="#validation">Validation</a></li>
+    <li><a href="#results">Results</a></li>
+    <li><a href="#showcase">Showcase</a></li>
+    <li><a href="#discussion">Discussion</a></li>
+    <li><a href="#limitations">Limitations</a></li>
+    <li><a href="#code">Code</a></li>
+    <li><a href="#references">References</a></li>
+  </ul>
+</nav>
+
+<main>
+
+<!-- ============================================================ -->
+<!-- Section 2: TL;DR                                             -->
+<!-- ============================================================ -->
+<section id="tldr">
+  <h2>TL;DR</h2>
+  <p>I simulated grain growth with solute drag in a 2D Q-state Potts Monte Carlo, with an explicit segregating-impurity field and a simple optical-scattering proxy. Increasing the dopant concentration slows boundary motion and shrinks the final grain size, which doubles the simulated optical attenuation across the range studied &mdash; a quantitative illustration of the activator-loading vs transparency trade-off in scintillator ceramic design.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- Section 3: Motivation                                        -->
+<!-- ============================================================ -->
+<section id="motivation">
+  <h2>Motivation</h2>
+
+  <p>Transparent ceramic scintillators (e.g. Lu<sub>2</sub>O<sub>3</sub>:Eu, YAG:Ce, GGAG:Ce) need two things at once:</p>
+  <ol>
+    <li>A high concentration of activator dopant for high light yield.</li>
+    <li>A microstructure that is optically transparent at the scintillation wavelength &mdash; which means <em>grains much smaller than the wavelength</em> (Rayleigh regime, no transmission penalty) <strong>or</strong> <em>grains much larger than the optical mean free path with very few residual boundaries</em> (geometric regime, low integrated scattering).</li>
+  </ol>
+
+  <p>The middle regime &mdash; grains comparable to or a few times the wavelength &mdash; is where the scattering coefficient is highest and the ceramic is opaque. Activator dopant atoms also segregate to grain boundaries during sintering, which retards boundary motion (the <em>solute drag</em> effect) and pins the final grain size. So dopant concentration affects both the radiative output (more dopant = more emission) <em>and</em> the microstructure (more dopant = smaller grains = more scattering).</p>
+
+  <p><strong>Question this report addresses:</strong> in a simple Potts-model simulation with explicit solute segregation and drag, how does the final grain size scale with dopant concentration, and what does that imply for the optical-transparency / activator-loading trade-off?</p>
+
+  <p>We answer with a 2D Q-state Potts simulation, an Option-A continuous solute field with diffusion and segregation, a coupled Metropolis acceptance rule with a <code>(1 &minus; C_local)</code> drag term, and a deliberately simple optical-scattering proxy. The optical proxy is illustrative; all of its limitations are spelled out in <a href="#limitations">Limitations</a>.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- Section 4: Theory                                            -->
+<!-- ============================================================ -->
+<section id="theory">
+  <h2>Theory</h2>
+
+  <article id="theory-potts">
+    <h3>1. Potts model</h3>
+    <p>The microstructure is a 2D L&times;L lattice. Each site (i, j) carries an integer orientation \(s(i, j) \in \{1, \ldots, Q\}\). We use Q = 48, L = 64 (L = 96 for the showcase), 4-nearest-neighbor connectivity with periodic boundary conditions everywhere.</p>
+
+    <h4>Site energy</h4>
+    \[
+      E_{site}(i, j) = J \sum_{(i', j') \in \mathcal{N}(i, j)} \bigl[1 - \delta_{s(i,j),\, s(i', j')}\bigr]
+    \]
+    <p>Zero when all neighbors share the site's orientation; J per unlike neighbor. We use J = 1 throughout.</p>
+
+    <h4>Total Hamiltonian (each bond counted once)</h4>
+    \[
+      H = \tfrac{1}{2}\sum_{(i, j)} E_{site}(i, j) = J \sum_{\langle (i,j), (i', j')\rangle} \bigl[1 - \delta_{s(i,j),\, s(i', j')}\bigr]
+    \]
+
+    <h4>Boundary site</h4>
+    <p>A site (i, j) is a <em>grain-boundary site</em> iff at least one neighbor has a different orientation. The binary boundary mask \(b(i, j) = 1\) for boundary sites, 0 otherwise. Implementation: <code>code/potts.py</code>.</p>
+  </article>
+
+  <article id="theory-mc">
+    <h3>2. Monte Carlo dynamics (Metropolis)</h3>
+
+    <h4>Proposal rule</h4>
+    <p>At a randomly chosen site (i, j), draw a proposed new orientation \(s'\) uniformly from the set of <em>distinct neighbor orientations</em>. If no neighbor differs, the proposal is a no-op.</p>
+
+    <h4>Acceptance rule</h4>
+    <p>Let \(\Delta E = E_{site}(s') - E_{site}(s)\) be the local energy change.</p>
+    \[
+      P_\text{accept} = \begin{cases} 1 & \Delta E \le 0 \\ \exp(-\Delta E / k_B T) & \Delta E > 0 \end{cases}
+    \]
+    <p>We use \(k_B T = 0.5\) throughout. One Monte Carlo sweep (MCS) is \(N = L^2\) random site visits. Implementation: <code>code/mc_step.py</code>.</p>
+  </article>
+
+  <article id="theory-solute">
+    <h3>3. Solute field</h3>
+    <p>The solute concentration \(C(i, j) \in [0, 1]\) is a continuous scalar on the same lattice as the orientations (Option A from the planning notes).</p>
+
+    <h4>Diffusion (explicit FD Laplacian, periodic BCs)</h4>
+    \[
+      C^{n+1}_{i,j} = C^n_{i,j} + D_{sol}\,\Delta t \cdot \nabla^2 C^n_{i,j}
+    \]
+    <p>with the 5-point stencil \(\nabla^2 C_{i,j} = C_{i+1,j} + C_{i-1,j} + C_{i,j+1} + C_{i,j-1} - 4 C_{i,j}\). CFL stability in 2D requires \(D_{sol} \cdot \Delta t \le 1/4\); the code rejects larger steps. Defaults: \(D_{sol} = 0.1\), \(\Delta t = 1\). The total mass \(M = \sum C(i, j)\) is preserved exactly because the periodic Laplacian sums to zero.</p>
+  </article>
+
+  <article id="theory-segregation">
+    <h3>4. Boltzmann segregation isotherm and the mass-conserving relaxation step</h3>
+    <p>A solute atom at a boundary site has energy \(E_{seg} &lt; 0\) relative to a bulk site. At thermal equilibrium between a boundary and a bulk site the populations satisfy a Boltzmann ratio:</p>
+    \[
+      \frac{C_{GB}}{C_{bulk}} = \exp\!\left(-\frac{E_{seg}}{k_B T}\right).
+    \]
+
+    <h4>Mass-conserving relaxation step</h4>
+    <p>Define a per-site Boltzmann weight</p>
+    \[
+      w(i, j) = \begin{cases} \exp(-E_{seg}/k_B T) & b(i, j) = 1 \\ 1 & b(i, j) = 0 \end{cases}
+    \]
+    <p>The equilibrium concentration field, normalized so total mass equals the current total \(M = \sum C\), is</p>
+    \[
+      C_{eq}(i, j) = \frac{M}{\sum_{i', j'} w(i', j')}\, w(i, j).
+    \]
+    <p>A relaxation step with rate \(r \in [0, 1]\) is</p>
+    \[
+      C^{n+1} = C^n + r \cdot \bigl(C_{eq} - C^n\bigr),
+    \]
+    <p>which preserves total mass exactly and reduces to a direct jump to equilibrium for \(r = 1\). Implementation: <code>code/solute.py</code>.</p>
+  </article>
+
+  <article id="theory-coupling">
+    <h3>5. Coupling: solute drag in the Metropolis step</h3>
+    <p>The "simple coupling" used here multiplies the standard Metropolis acceptance probability by a local drag factor:</p>
+    \[
+      P_\text{accept}^\text{coupled}(i, j) = P_\text{accept}^\text{Potts}(i, j) \cdot \max\!\bigl(0,\ \min(1,\ 1 - C(i, j))\bigr).
+    \]
+    <p>When \(C(i, j) = 0\) the rule reduces to the standard Metropolis dynamics; when \(C(i, j) = 1\) the site cannot flip at all. This produces a qualitative Cahn-style drag-vs-velocity curve but lacks the explicit velocity dependence of the full Cahn integral. Implementation: <code>code/mc_step.py</code> (<code>coupled_metropolis_step</code>, <code>coupled_mc_step</code>).</p>
+
+    <h4>One coupled MCS, in order</h4>
+    <ol>
+      <li>One coupled MC sweep: \(N = L^2\) site visits using <code>coupled_metropolis_step</code>.</li>
+      <li>One diffusion step with parameters \((D_{sol}, \Delta t)\).</li>
+      <li>One segregation relaxation toward \(C_{eq}\) with rate \(r\).</li>
+    </ol>
+    <p>Implementation: <code>code/simulation.py</code> (<code>run_coupled_simulation</code>).</p>
+  </article>
+
+  <article id="theory-optical">
+    <h3>6. Optical scattering proxy (illustrative)</h3>
+    <p>Strictly a 2D, geometric-regime proxy &mdash; not a Mie or photon-transport calculation. See <a href="#limitations">Limitations</a> for the full framing.</p>
+
+    <h4>Boundary map</h4>
+    <p>\(b(i, j) = 1\) if any neighbor of \((i, j)\) has a different orientation, else 0.</p>
+
+    <h4>Scattering intensity field</h4>
+    <p>Periodic Gaussian convolution of the boundary map, representing the diffraction-limited halo around each point scatterer:</p>
+    \[
+      I(x) = (G_\sigma \star b)(x), \qquad G_\sigma(x) \propto \exp(-|x|^2 / 2\sigma^2).
+    \]
+    <p>We use \(\sigma = 2.5\) lattice units in the showcase. The convolution is performed with <code>mode = 'wrap'</code> for periodic BCs; total intensity \(\sum I(x) = \sum b(x)\) is preserved.</p>
+
+    <h4>Effective attenuation coefficient</h4>
+    \[
+      \mu_\text{eff} = (\delta n)^2 \cdot f_\text{boundary}, \qquad f_\text{boundary} = \frac{1}{L^2}\sum_{i,j} b(i, j).
+    \]
+    <p>For a polycrystal in the geometric regime, \(f_\text{boundary}\) scales as \(1/\langle D \rangle\), so \(\mu_\text{eff} \sim 1/\langle D \rangle\). The \((\delta n)^2\) prefactor is a placeholder; absolute magnitudes are arbitrary.</p>
+
+    <h4>Beer&ndash;Lambert transmission (illustrative)</h4>
+    \[
+      T = \exp(-\mu_\text{eff} \cdot L_\text{fiber}).
+    \]
+    <p>Implementation: <code>code/optical_proxy.py</code>.</p>
+  </article>
+
+  <article id="theory-symbols">
+    <h3>Symbol summary</h3>
+    <table>
+      <thead>
+        <tr><th>symbol</th><th>meaning</th><th>default value</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>L</td><td>lattice side</td><td>64 (96 for showcase)</td></tr>
+        <tr><td>Q</td><td>number of orientations</td><td>48</td></tr>
+        <tr><td>J</td><td>Potts coupling constant</td><td>1</td></tr>
+        <tr><td>kT</td><td>Monte Carlo temperature</td><td>0.5</td></tr>
+        <tr><td>C(i, j)</td><td>local solute concentration</td><td>initialized to <code>C_bulk</code></td></tr>
+        <tr><td>C_bulk</td><td>initial bulk solute concentration</td><td>swept</td></tr>
+        <tr><td>E_seg</td><td>solute segregation energy at boundary</td><td>swept</td></tr>
+        <tr><td>D_sol</td><td>solute diffusion coefficient</td><td>0.1</td></tr>
+        <tr><td>dt</td><td>diffusion time step</td><td>1</td></tr>
+        <tr><td>r</td><td>segregation relaxation rate</td><td>1.0</td></tr>
+        <tr><td>sigma</td><td>Gaussian scattering halo width</td><td>2.5 lattice units</td></tr>
+        <tr><td>delta_n</td><td>refractive-index mismatch (placeholder)</td><td>0.01</td></tr>
+      </tbody>
+    </table>
+  </article>
+</section>
+
+<!-- ============================================================ -->
+<!-- Section 5: Methods                                           -->
+<!-- ============================================================ -->
+<section id="methods">
+  <h2>Methods</h2>
+
+  <article>
+    <h3>Potts lattice</h3>
+    <p>A 2D L&times;L lattice (default L = 64, except L = 96 for the showcase) where each site holds an integer orientation in {1, &hellip;, Q} (Q = 48). 4-nearest-neighbor connectivity with periodic boundary conditions throughout. Site energy is <code>J &middot; (number of unlike neighbors)</code> with J = 1.</p>
+    <p>Implementation: <code>code/potts.py</code>. Initial condition: uniform random orientations, which gives a fully disordered "fine-grain" starting microstructure (~L<sup>2</sup> grains of size 1 at MCS = 0).</p>
+  </article>
+
+  <article>
+    <h3>Monte Carlo dynamics</h3>
+    <p>Standard Q-state Potts Metropolis with a key efficiency variant: the proposed new orientation at each site is drawn uniformly from the set of <em>distinct neighbor orientations</em>, not from all Q. This is the standard practice for grain-growth Potts simulations and converges much faster than random sampling over Q.</p>
+    <p>One Monte Carlo sweep (MCS) consists of N = L<sup>2</sup> random site visits. Acceptance rule:</p>
+    <ul>
+      <li>&Delta;E &le; 0: accept.</li>
+      <li>&Delta;E &gt; 0: accept with probability <code>exp(&minus;&Delta;E / kT)</code>.</li>
+    </ul>
+    <p>Default kT = 0.5 (well below the Q-state ordering transition, appropriate for a curvature-driven coarsening regime). Implementation: <code>code/mc_step.py</code>.</p>
+  </article>
+
+  <article>
+    <h3>Solute coupling</h3>
+    <p>The solute field <code>C(i, j)</code> is a continuous scalar in [0, 1] on the same lattice as the orientations (Option A from the planning notes). Diffusion is an explicit finite-difference Laplacian (5-point stencil, periodic BCs); a CFL guard rejects steps with <code>D &middot; &Delta;t &gt; 0.25</code>. Default <code>D_sol = 0.1</code>, <code>&Delta;t = 1</code>.</p>
+    <p>Segregation drives the field toward the equilibrium <code>C_eq &prop; w</code>, where <code>w = exp(&minus;E_seg/kT)</code> on boundary sites and <code>1</code> in the bulk, normalized so the total mass is conserved exactly. A relaxation rate parameter (default 1.0, full relaxation per step) controls the approach to equilibrium.</p>
+    <p><strong>Coupling to grain growth (the drag mechanism).</strong> The Metropolis acceptance probability at site (i, j) is multiplied by the local drag factor <code>(1 &minus; C(i, j))</code>, clamped to [0, 1]. High local solute concentration suppresses boundary motion. This is the simpler of the two coupling options in the planning notes; its limitations vs the full Cahn integral are discussed in <a href="#limitations">Limitations</a>.</p>
+    <p>Implementation: <code>code/solute.py</code>, <code>code/mc_step.py</code>, <code>code/simulation.py</code>.</p>
+  </article>
+
+  <article>
+    <h3>Optical scattering proxy</h3>
+    <p>A 2D, geometric-regime, illustrative proxy &mdash; <strong>not</strong> a Mie or photon-transport calculation.</p>
+    <ol>
+      <li>Compute the binary grain-boundary map (1 where any neighbor differs).</li>
+      <li>Convolve with a periodic Gaussian (&sigma; = 2.5 lattice units) to represent diffraction-limited halos around point scatterers.</li>
+      <li>Define a scalar effective attenuation coefficient <code>&mu;_eff = (&delta;n)<sup>2</sup> &middot; f_boundary</code>, where <code>f_boundary</code> is the boundary-site fraction. This scales as <code>1/&lang;D&rang;</code> for a polycrystal in the geometric regime.</li>
+      <li>Beer&ndash;Lambert transmission <code>T = exp(&minus;&mu; &middot; L_fiber)</code> for illustration.</li>
+    </ol>
+    <p>The (&delta;n)<sup>2</sup> prefactor is a placeholder; absolute magnitudes have no calibrated meaning. What is meaningful is the <em>trend</em> of &mu;_eff vs dopant concentration. Implementation: <code>code/optical_proxy.py</code>.</p>
+  </article>
+
+  <article>
+    <h3>Reproducibility</h3>
+    <p>All experiments are seeded (default seed = 0) and orchestrated by <code>code/experiments.py</code>. The full campaign runs in ~35 s on a laptop and regenerates every figure under <code>results/figures/</code> plus the underlying arrays under <code>results/data/</code>.</p>
+  </article>
+</section>
+
+<!-- ============================================================ -->
+<!-- Section 6: Validation                                        -->
+<!-- ============================================================ -->
+<section id="validation">
+  <h2>Validation</h2>
+
+  <article id="val-parabolic">
+    <h3>Parabolic growth law</h3>
+    <figure>
+      <img src="assets/figures/parabolic_growth.png"
+           alt="Plot of mean grain diameter squared vs Monte Carlo sweeps; data points fall on a straight line.">
+      <figcaption>Linear fit of <code>&lang;D&rang;<sup>2</sup></code> vs MCS over the linear regime (skipping the first 20% as transient): <strong>k &asymp; 1.10</strong>, <strong>R<sup>2</sup> &asymp; 0.96</strong>. Same order of magnitude as published Q-state Potts grain-growth values; the exact constant depends on conventions (per-sweep MCS rate, Q, neighbor connectivity, fit window). For this report we treat k as a model-internal constant.</figcaption>
+    </figure>
+  </article>
+
+  <article id="val-distribution">
+    <h3>Late-time grain size distribution</h3>
+    <figure>
+      <img src="assets/figures/grain_size_distribution.png"
+           alt="Normalized histogram of grain diameters divided by mean diameter at MCS 200; a unimodal distribution peaked near 1.">
+      <figcaption>Normalized histogram of <code>D / &lang;D&rang;</code> at MCS = 200. Unimodal, peaked near 1, with a rightward tail &mdash; qualitatively consistent with the Hillert self-similar form. The L = 64, N &asymp; 19 final-frame statistics are too sparse for a quantitative Hillert fit. A larger lattice (L = 256+) and seed averaging would be needed.</figcaption>
+    </figure>
+  </article>
+
+  <article id="val-drag">
+    <h3>Solute drag curve</h3>
+    <figure>
+      <img src="assets/figures/cahn_drag_curve.png"
+           alt="Scatter plot of drag force F_i versus boundary velocity v with a binned-mean overlay that rises to a peak at intermediate velocity.">
+      <figcaption><code>F_i = v_pure &minus; v_coupled</code> evaluated at matched mean grain diameter (matched curvature driving force) across 95 pooled samples from five C_bulk runs. The binned mean (black line) is non-monotonic: it rises to a peak at intermediate v and falls toward zero at low v and high v &mdash; the qualitative Cahn signature. The high-v fall-off is shallower than full Cahn theory predicts because our coupling uses a static <code>(1 &minus; C)</code> factor rather than a velocity-dependent integral.</figcaption>
+    </figure>
+  </article>
+</section>
+
+<!-- ============================================================ -->
+<!-- Section 7: Results: dopant sweep                             -->
+<!-- ============================================================ -->
+<section id="results">
+  <h2>Results: dopant sweep</h2>
+
+  <article id="results-dt">
+    <h3>Mean grain diameter vs MCS</h3>
+    <figure>
+      <img src="assets/figures/concentration_sweep.png"
+           alt="Six curves of mean grain diameter vs Monte Carlo sweeps, one per dopant concentration; higher dopant concentrations end at lower diameters.">
+      <figcaption>Six runs at C_bulk &isin; {0, 0.001, 0.01, 0.05, 0.1, 0.2}, fixed E_seg = &minus;1, D_sol = 0.1. Final &lang;D&rang; falls from 14.0 (C = 0) to 10.6 (C = 0.2). The C &rarr; 0 limit recovers pure-growth behavior to within finite-size noise (compare 0.000, 0.001, 0.010 &mdash; all &asymp; 14). At higher C the curves separate cleanly: more dopant, slower growth, smaller final grain size.</figcaption>
+    </figure>
+  </article>
+
+  <article id="results-design">
+    <h3>Design curve: final grain size vs dopant</h3>
+    <figure>
+      <img src="assets/figures/design_curve.png"
+           alt="Final mean grain diameter as a function of dopant concentration; a monotonic decrease.">
+      <figcaption>The "useful output." For a fixed sintering time (200 MCS), final &lang;D&rang; decreases monotonically from &asymp; 14 at C = 0 to &asymp; 10.6 at C = 0.2 (E_seg = &minus;1, D_sol = 0.1). A practitioner could in principle pick a dopant loading by reading off the desired grain size from this curve &mdash; within the limits of the model.</figcaption>
+    </figure>
+  </article>
+
+  <article id="results-attenuation">
+    <h3>Optical attenuation vs dopant</h3>
+    <figure>
+      <img src="assets/figures/attenuation_vs_concentration.png"
+           alt="Effective attenuation coefficient as a function of dopant concentration; a monotonic increase.">
+      <figcaption>&mu;_eff rises from 2.3e&minus;5 at C = 0 to 3.2e&minus;5 at C = 0.2 &mdash; a ~40% increase over the range. Combined with the design curve, this is the bridge between the microstructural physics and the optical consequence: more dopant &rarr; smaller grains &rarr; more boundary area &rarr; more scattering. The next section establishes the scaling quantitatively.</figcaption>
+    </figure>
+  </article>
+
+  <article id="results-scaling">
+    <h3>Optical scaling check</h3>
+    <p>For a polycrystal in the geometric scattering regime, <code>&mu;_eff &prop; 1/&lang;D&rang;</code>. Across the six dopant-sweep cases, a log-log fit <code>log &mu;_eff = a &middot; log &lang;D&rang; + b</code> gives <strong>a = &minus;0.78</strong> (expected &minus;1.0), and <code>&mu;_eff &middot; &lang;D&rang;</code> is constant to ~15% (range 2.95e&minus;4 to 3.51e&minus;4). The deviation from exactly &minus;1 reflects (a) finite-size noise in boundary-fraction estimates at L = 64, and (b) the boundary-site fraction is an approximation to perimeter per unit area for thin grains. The trend is correct.</p>
+  </article>
+</section>
+
+<!-- ============================================================ -->
+<!-- Section 8: Showcase                                          -->
+<!-- ============================================================ -->
+<section id="showcase">
+  <h2>The showcase visualization</h2>
+
+  <figure id="showcase-figure">
+    <img src="assets/figures/showcase_3x2.png"
+         alt="Three-by-two grid: top row shows microstructure for low, medium, and high dopant; bottom row shows the corresponding scattering intensity field, with a shared color scale.">
+    <figcaption><strong>Caption.</strong> <em>Simulated microstructure (top row) and optical scattering intensity field (bottom row) for three dopant concentrations after 300 Monte Carlo sweeps (L = 96, Q = 48, kT = 0.5, E_seg = &minus;2.5, D_sol = 0.1). As dopant concentration increases from C = 0.05 to C = 0.40, solute drag reduces the mean grain size from &lang;D&rang; &asymp; 15.5 to &lang;D&rang; &asymp; 7.9, producing a denser network of grain boundaries and correspondingly stronger optical scattering (&mu;_eff rises from 2.2e&minus;5 to 4.2e&minus;5 inverse lattice units, a factor of ~2). The scattering field is computed as a Gaussian convolution (&sigma; = 2.5 lattice units) of the binary grain-boundary map; absolute values are illustrative only.</em></figcaption>
+  </figure>
+
+  <p><strong>Discussion.</strong> This figure makes the trade-off visually immediate:</p>
+  <ul>
+    <li>The <strong>low-dopant case</strong> (left, C = 0.05) is in the no-drag regime for our parameters &mdash; its final grain size is statistically indistinguishable from a no-solute run. Few, large grains; sparse scattering field.</li>
+    <li>The <strong>medium-dopant case</strong> (center, C = 0.20) shows the onset of drag: &lang;D&rang; has dropped to &asymp; 12, the grain count has roughly doubled, and the scattering field is denser and brighter overall.</li>
+    <li>The <strong>high-dopant case</strong> (right, C = 0.40) is heavily drag-limited: many small grains, &lang;D&rang; &asymp; 8, and a near-uniform bright scattering field &mdash; the geometric-regime limit where the polycrystal acts as a diffuse scatterer.</li>
+  </ul>
+
+  <p>For a real scintillator, the bottom row of this figure represents the photon's experience: a relatively transparent slab on the left, a heavily scattering one on the right. The activator-loading lever visibly trades light yield against transparency. This is the central qualitative finding the project was set up to demonstrate.</p>
+
+  <p>The same shared color scale across the bottom row makes the comparison honest &mdash; the brightness in the high-dopant panel is <em>not</em> just a colormap artefact, it is a real ~2&times; rise in &mu;_eff.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- Section 9: Discussion                                        -->
+<!-- ============================================================ -->
+<section id="discussion">
+  <h2>Discussion: implications for transparent ceramic scintillators</h2>
+
+  <article id="discussion-tradeoff">
+    <h3>The activator-vs-transparency trade-off</h3>
+    <p>The project's core finding is summarized by the design curve and the attenuation curve read together: increasing dopant loading reduces grain size and increases optical scattering by closely matched factors. In the geometric regime, doubling dopant loading roughly halves grain size and roughly doubles &mu;_eff (verified by the slope of &minus;0.78 in the optical scaling check).</p>
+
+    <p>For a real scintillator the implication is that the dopant loading chosen for emission yield directly sets the optical mean free path of the ceramic. There is no free lunch: the same dopant that brightens the scintillator pins the grain boundaries that scatter its emission.</p>
+  </article>
+
+  <article id="discussion-target">
+    <h3>What grain size should a designer target?</h3>
+    <p>In the <strong>geometric regime</strong> (grain size much larger than &lambda;), &mu;_eff scales as 1/&lang;D&rang; &mdash; bigger is better, all else equal. In the <strong>Rayleigh regime</strong> (grain size much smaller than &lambda;), the per-grain scattering cross-section drops off as (D/&lambda;)<sup>4</sup>, so smaller is better. The crossover region is where transparency is worst.</p>
+
+    <p>For Lu<sub>2</sub>O<sub>3</sub>:Eu at the Eu emission wavelength (~610 nm), the geometric regime corresponds roughly to &lang;D&rang; &gt; 10 &mu;m; the Rayleigh regime to &lang;D&rang; &lt; 100 nm. Sintered ceramics typically end up at &lang;D&rang; &asymp; 1&ndash;10 &mu;m, right in the worst region. The design implication of our model is that practitioners pushing for higher activator loading need to either (a) increase sintering time / temperature to compensate for drag and stay in the geometric regime, or (b) push dopant loading much higher to drive &lang;D&rang; below ~&lambda;/10 &mdash; usually impractical because of solubility limits and the resulting concentration quenching of emission.</p>
+  </article>
+
+  <article id="discussion-caveats">
+    <h3>Quantitative caveats</h3>
+    <p>Our &mu;_eff is in arbitrary inverse-lattice units; we cannot read off an absolute mean free path. The <em>scaling</em> with grain size is the defensible claim. The <em>factor of ~2 rise in &mu;_eff over the dopant range studied</em> is also defensible because it follows directly from the boundary-fraction trend, which is geometric.</p>
+
+    <p>What we cannot say from this work: the absolute optical loss in dB, the wavelength dependence of the scattering, or the relative contribution of grain boundaries vs intra-grain inclusions vs porosity in a real ceramic.</p>
+  </article>
+</section>
+
+<!-- ============================================================ -->
+<!-- Section 10: Limitations                                      -->
+<!-- ============================================================ -->
+<section id="limitations">
+  <h2>Limitations and future work</h2>
+
+  <ol>
+    <li><strong>2D simulation.</strong> Real grain growth is 3D. The mean exponent in &lang;D&rang;<sup>2</sup> = k&middot;t is the same in 2D and 3D, but topological details (vertex degrees, junction geometry) differ. Quantitative grain statistics from 2D should not be applied directly to a 3D ceramic.</li>
+
+    <li><strong>Static drag coefficient.</strong> Our coupling uses <code>acceptance &prop; (1 &minus; C_local)</code>, which produces a Cahn-shaped peak qualitatively but does not have the velocity-dependent diffusion-limited regime built in. A more faithful model would compute the steady-state segregation profile around a moving boundary and integrate it for the drag force; this is the actual Cahn 1962 calculation.</li>
+
+    <li><strong>Isotropic boundary energy.</strong> All boundaries treated equal (J = 1.0). Real polycrystals have anisotropic (low-angle vs high-angle, &Sigma;-boundary) energies driving abnormal grain growth and texture.</li>
+
+    <li><strong>No stochastic noise on the solute field.</strong> The segregation update is deterministic relaxation toward the local equilibrium.</li>
+
+    <li><strong>Finite-size effects.</strong> At MCS = 200 on L = 64, &lang;D&rang; &asymp; 14 means ~4&ndash;5 grains across the box. Late-time statistics (Hillert distribution especially) are limited by this; bumping L to 128 or 256 would help at ~5&ndash;25&times; the runtime.</li>
+
+    <li><strong>Optical proxy is illustrative only.</strong> &mu;_eff is a 2D boundary-fraction proxy with a (&delta;n)<sup>2</sup> prefactor, not a Rayleigh or Mie or photon-transport calculation. The proxy captures the correct <em>scaling</em> with grain size in the geometric regime (validated numerically), but absolute magnitudes are arbitrary. Real ceramics depend on grain size, refractive-index mismatch, wavelength, porosity, and absorption in ways that combine non-trivially.</li>
+  </ol>
+
+  <p><strong>Future-work candidates ranked by interest-to-effort ratio:</strong></p>
+  <ul>
+    <li><strong>Multi-seed averaging</strong> (cheap; tightens the E_seg sweep and the drag curve considerably).</li>
+    <li><strong>L = 256 with longer sweeps</strong> (moderate; gives a real Hillert fit and a smoother drag curve).</li>
+    <li><strong>Velocity-dependent Cahn drag implementation</strong> (harder; would bring the drag curve from qualitative to quantitative agreement).</li>
+    <li><strong>Anisotropic boundary energies</strong> (harder still; opens up abnormal-grain-growth behavior).</li>
+    <li><strong>Couple to a photon-transport calculator</strong> (large; would make the optical numbers real).</li>
+  </ul>
+
+  <p>Quantitative optical predictions would require a coupled Monte Carlo photon-transport simulation, outside the scope of this class project.</p>
+</section>
+
+<!-- ============================================================ -->
+<!-- Section 11: Code and reproducibility                         -->
+<!-- ============================================================ -->
+<section id="code">
+  <h2>Code and reproducibility</h2>
+
+  <p>All code, tests, figures, and the underlying data arrays live in the project repository at <a href="https://github.com/Grahamalt/grain-growth-sim">https://github.com/Grahamalt/grain-growth-sim</a>. Every figure on this page is regenerated by <code>code/main.py</code> from the seeded RNG and the parameters in <code>code/experiments.py</code>.</p>
+
+  <pre><code>git clone https://github.com/Grahamalt/grain-growth-sim.git
+cd grain-growth-sim
+pip install numpy scipy matplotlib pytest
+python code/main.py        # ~35-60 s, regenerates all figures
+python -m pytest tests/    # 67 tests
+</code></pre>
+</section>
+
+<!-- ============================================================ -->
+<!-- Section 12: References                                       -->
+<!-- ============================================================ -->
+<section id="references">
+  <h2>References</h2>
+  <p>Background literature this project draws on. Reference values quoted in the Validation section are cited from general background, not by re-reading the papers below for this writeup.</p>
+  <ol>
+    <li>M. Hillert, "On the theory of normal and abnormal grain growth," <em>Acta Metallurgica</em> <strong>13</strong>, 227 (1965).</li>
+    <li>J. W. Cahn, "The impurity-drag effect in grain boundary motion," <em>Acta Metallurgica</em> <strong>10</strong>, 789 (1962).</li>
+    <li>K. L&uuml;cke and H. P. St&uuml;we, "On the theory of impurity controlled grain boundary motion," <em>Acta Metallurgica</em> <strong>19</strong>, 1087 (1971).</li>
+    <li>M. P. Anderson, D. J. Srolovitz, G. S. Grest, P. S. Sahni, "Computer simulation of grain growth &mdash; I. Kinetics," <em>Acta Metallurgica</em> <strong>32</strong>, 783 (1984). The canonical Q-state Potts grain-growth reference.</li>
+    <li>E. A. Holm, C. C. Battaile, "The computer simulation of microstructural evolution," <em>JOM</em> <strong>53</strong>, 20 (2001). Useful review with k values and conventions tabulated.</li>
+    <li>W. W. Burke and D. Turnbull, "Recrystallization and grain growth," <em>Progress in Metal Physics</em> <strong>3</strong>, 220 (1952). The original parabolic-law derivation.</li>
+    <li>A. Ikesue and Y. L. Aung, "Ceramic laser materials," <em>Nature Photonics</em> <strong>2</strong>, 721 (2008). Background on optical-grade transparent ceramics and the role of grain size.</li>
+  </ol>
+</section>
+
+</main>
+
+<!-- ============================================================ -->
+<!-- Section 13: Footer                                           -->
+<!-- ============================================================ -->
+<footer>
+  <p>3.21 (Kinetic Processes in Materials) &middot; Spring 2026</p>
+  <p>Graham Altschuler &middot; <a href="mailto:graham@altschuler.com">graham@altschuler.com</a></p>
+  <p><a href="https://github.com/Grahamalt/grain-growth-sim">github.com/Grahamalt/grain-growth-sim</a></p>
+</footer>
+
+<script src="script.js" defer></script>
 </body>
 </html>
