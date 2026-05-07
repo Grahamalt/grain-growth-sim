@@ -10,3 +10,4 @@ results/figures/*
 results/data/*
 !results/figures/.gitkeep
 !results/data/.gitkeep
+.vercel/
