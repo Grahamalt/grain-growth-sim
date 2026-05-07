@@ -185,9 +185,6 @@
           <dt>Right</dt>
           <dd>How hard the dopant pulls back on a moving grain boundary, plotted against the boundary's speed. The peak in the middle is the classic "solute drag" signature first predicted by Cahn in 1962. Slow boundaries drag the dopant with them, fast ones outrun it, and the maximum drag happens in between.</dd>
         </dl>
-        <p class="aside">Mass conservation, equilibrium-segregation ratio, and limit
-           behaviour (C&rarr;0 recovers pure growth, C=1 freezes the lattice) are all
-           checked in the 67 unit tests.</p>
       </article>
 
       <!-- RESULTS -->
@@ -217,9 +214,6 @@
           <dt>Right</dt>
           <dd>The simulated optical scattering coefficient as a function of dopant. More dopant pins more boundaries, more boundaries scatter more light. The trend is monotone: every bit of activator you add costs a bit of transparency.</dd>
         </dl>
-        <p class="aside">A log-log fit of &mu;_eff vs &lang;D&rang; gives slope
-           &minus;0.78 (expected &minus;1). The simulation reproduces the
-           textbook 1/&lang;D&rang; scaling for boundary-limited scattering.</p>
       </article>
 
       <!-- ANIMATION -->
@@ -240,8 +234,6 @@
           </div>
         </div>
         <p class="plot-notes-single">Each frame is the grain map at a different point during one simulation run. At MCS = 0 the lattice starts as random noise, effectively ~4000 tiny single-pixel "grains." As the simulation progresses, like-oriented neighbors merge and grain boundaries straighten out to lower the system's energy. By the last frame only ~30 grains remain, each made of hundreds of pixels.</p>
-        <p class="aside">One representative coupled run (C_bulk = 0.05, E_seg = &minus;1.5).
-           Use the slider to scrub by hand or hit Play to loop it.</p>
       </article>
 
       <!-- METHODS -->
